@@ -135,10 +135,3 @@ export class Game {
     //send the updated board to the both player
   }
 }
-// {
-//   "type":"move",
-//   "move":{
-//     "from":"a1",
-//     "to":"a2"
-//   }
-// }

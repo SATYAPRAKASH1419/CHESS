@@ -3,6 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Game = void 0;
 const chess_js_1 = require("chess.js");
 const messages_1 = require("./messages");
+const zod_1 = require("zod");
+const moveSchema = zod_1.z.object({
+    from: zod_1.z.string().length(2),
+    to: zod_1.z.string().length(2),
+});
 class Game {
     constructor(player1, player2) {
         this.player1 = player1;
@@ -24,21 +29,43 @@ class Game {
     }
     makeMove(socket, move) {
         //validation of user->user and move using zod
-        if (this.board.turn() === "w" && socket !== this.player1) {
-            console.log("Returning from early return 1");
+        const validation = moveSchema.safeParse(move);
+        if (!validation.success) {
+            socket.send(JSON.stringify({
+                type: "error",
+                payload: {
+                    message: "Invalid move format. 'from' and 'to' must be valid squares like 'e2'.",
+                },
+            }));
             return;
         }
-        if (this.board.turn() === "b" && socket !== this.player2) {
-            console.log("Returning from early return 1");
+        const currentTurn = this.board.turn();
+        if (currentTurn === "w" && socket !== this.player1) {
+            socket.send(JSON.stringify({
+                type: "error",
+                payload: {
+                    message: "NOT your turn (White Moves Now)"
+                }
+            }));
             return;
         }
-        try {
-            //update the board
-            //push the move
-            this.board.move(move);
+        if (currentTurn === "b" && socket !== this.player2) {
+            socket.send(JSON.stringify({
+                type: "error",
+                payload: {
+                    message: "Not your turn (black moves now)"
+                }
+            }));
+            return;
         }
-        catch (error) {
-            console.log(error);
+        const result = this.board.move(move);
+        if (!result) {
+            socket.send(JSON.stringify({
+                type: "error",
+                payload: {
+                    message: "Illegal move. Please try again.",
+                },
+            }));
             return;
         }
         //check if the game is over
@@ -72,10 +99,3 @@ class Game {
     }
 }
 exports.Game = Game;
-// {
-//   "type":"move",
-//   "move":{
-//     "from":"a1",
-//     "to":"a2"
-//   }
-// }
